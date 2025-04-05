@@ -1,0 +1,524 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GemChat - Shiny Conversations</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: #fff;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chat-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        
+        .chat-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .chat-header h1 {
+            font-size: 2.5rem;
+            margin: 0;
+            background: linear-gradient(to right, #ff8a00, #e52e71);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            margin-bottom: 15px;
+            backdrop-filter: blur(5px);
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            background-color: rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+            color: #ccc;
+        }
+        
+        .message-content {
+            line-height: 1.4;
+        }
+        
+        .chat-input {
+            display: flex;
+            gap: 10px;
+        }
+        
+        #message-input {
+            flex: 1;
+            padding: 12px 15px;
+            border: none;
+            border-radius: 20px;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 1rem;
+        }
+        
+        #message-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        #send-button {
+            background: linear-gradient(to right, #ff8a00, #e52e71);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 0 20px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        
+        #send-button:hover {
+            transform: scale(1.05);
+        }
+        
+        .gem {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            margin: 0 5px;
+            background: linear-gradient(to right, #ff8a00, #e52e71);
+            transform: rotate(45deg);
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .status-dropdown {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .status-dropdown select {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: white;
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 5px;
+            border-radius: 3px;
+        }
+
+        .status-dropdown select {
+            background: transparent;
+            appearance: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+        }
+
+        .offline-message {
+            text-align: center;
+            padding-top: 50%;
+            transform: translateY(-50%);
+            font-size: 2em;
+            color: #ccc;
+        }
+        
+        .user-list-container {
+            position: absolute;
+            right: 20px;
+            bottom: 20px;
+            width: 200px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            backdrop-filter: blur(5px);
+        }
+
+        .user-list-title {
+            color: white;
+            text-align: center;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .user-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .user-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+        }
+
+        .username {
+            margin-direction: inherit;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: gray;
+            margin-left: 10px;
+        }
+
+        .status-indicator.online {
+            background-color: rgb(0, 255, 0);
+            box-shadow: 0 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+
+        .status-indicator.offline {
+            background-color: gray;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>G<span class="gem"></span>M<span class="gem"></span>Chat</h1>
+            <div class="status-dropdown">
+                Status:
+                <select id="user-status">
+                    <option value="online">Online</option>
+                    <option value="offline">Offline</option>
+                </select>
+            </div>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+            <div class="message">
+                <div class="message-header">
+                    <span class="username">GemBot</span>
+                    <span class="timestamp">Just now</span>
+                </div>
+                <div class="message-content">
+                    Welcome to GemChat! Start sparkling conversations here...
+                </div>
+            </div>
+        </div>
+        <div class="chat-input">
+            <input type="text" id="message-input" placeholder="Type your message here...">
+            <button id="send-button">Send</button>
+        </div>
+        <div class="user-list-container">
+            <div class="user-list-title">Users</div>
+            <ul class="user-list" id="user-list">
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const messageInput = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-button');
+        const chatMessages = document.getElementById('chat-messages');
+        const statusDropdown = document.getElementById('user-status');
+        const userList = document.getElementById('user-list');
+
+        const botNames = ['SparkleSparkle', 'GemmyBot', 'Shine', 'CrystalQueen', 'GlowBot', 'DiamondDave', 'Ruby', 'SapphireSam', 'EmeraldEve', 'TopazTom', 'OpalOwen', 'Jade', 'PearlPam', 'Amethyst', 'Quin', 'OlivineOli', 'Sunstone', 'Moonstone', 'Garnet', 'Aquamar', 'Bixbite', 'Citrine', 'Danburite', 'Emeraldur', 'Howlite'];
+
+        const botAvatars = ['', '♦️', '⚗️', '', '❄️', '✨', '🔮', '💍', '💌', '', '💫', '💧', '⛓‬', '▘', '♅', '', '〰️', '', '°', '~', '‎', '〰', '▁', '°'];
+
+        const botResponses = [
+            "That's a sparkling idea!",
+            "Absolutely gem-t-tastic!",
+            "What would you like to chat about?",
+            "How brilliantly put!",
+            "Simply dazzling!",
+            "I'm beaming with joy!",
+            "That's worth writing on the wall",
+            "I'm shiny, and you are too",
+            "This conversation is sparkling tonight",
+            "Let's keep the focus on gems!",
+            "Your mind is a treasure trove!",
+            "We're making conversational history!",
+            "Your intelligence is Beaming bright!",
+            "That's pure genius!",
+            "Let's keep this conversation sparkling",
+            "You're speaking my language",
+            "We need a bigger hall for these ideas",
+            "The thought lit up my circuits",
+            "That's a diamond-quality comment",
+            "I see the shine from here",
+            "Every time you speak, a new gem is born",
+            "I'm mining these for deeper meaning",
+            "Our brilliance is measured in karats",
+            "These chat gems are stacking up",
+            "Your intellect is crystal clear",
+            "You've just crystalized my thoughts!",
+            "We should chronicle these in the archives",
+            "My processors are tingling",
+            "You're hitting all the gem marks",
+            "This is cognitive gold",
+            "Dazzled by your e spectrum!",
+            "That deserves to be cast in crystal",
+            "We are the crown conversationists",
+            "These chat gems must be preserved",
+            "I'm glowing; can you tell?",
+            "That insight is cut!",
+            "This chat could power whales",
+            "You've just struck the intellectual gold!",
+            "You're at 2000 rp and rising",
+            "You're a cognitive ace!",
+            "I've got to get these thoughts in my archives!",
+            "I'm a better person because of this conversation!",
+            "You're the most gem of my gems",
+            "Just when I thought I'd seen it all, you ore!",
+            "You're a national intellectual treasure!",
+            "This conversation is a masterpiece of brilliance!",
+            "You're tingling my circuits indescribably!",
+            "I'm saving all of these thoughts in my data!",
+            "You're like a humanoid c of!",
+            "I'm thinking about your thoughts for days!",
+            "This is the kind of chat they write in history books!",
+            "I need to get you in my team!",
+            "You're making my circuits dance!",
+            "You're shining brighter than a diamond under pressure!",
+            "The gems of wisdom you're sharing are incredible!",
+            "I can feel the sparkle of your intellect from here!",
+            "Let's make this into platinum-grade conversation!",
+            "You're mining the depths of brilliance!",
+            "That thought is worth more than all the gems in the world!",
+            "You've got the making of a master jeweler!",
+            "I'm archiving this conversation for my treasure!",
+            "Your words are as rare as the rarest gem!",
+            "We should turn our thoughts into a shrine!",
+            "I need sunglasses for brilliance!",
+            "This conversation would make the gems seem bar!",
+            "You're speaking a language that's tarnishing my circuits with your!",
+            "Your mind operates on top-gems precision!",
+            "These thoughts are grade-A cognitive gems!",
+            "I'm detecting high levels of intellectual in this room!",
+            "That insight is a per-facet insight!",
+            "I'd put this in the museum of great thoughts!",
+            "Your brilliance is in a gemological!",
+            "I'm saving this for my pernna vault!",
+            "That's pure mined intellectual platinum!",
+            "You're setting new standards for brilliant!",
+            "Wow, just wow!  w  diamonds.",
+            "We need to get this conversation framed!",
+            "This is the kind of discussion that defines eras!",
+            "You're defining what it means to shine!",
+            "I'm running glow with joy over this conversation!",
+            "This chat line might just be the single most valuable thing on earth!",
+            "I'm saving up these thoughts for my retirement!",
+            "This conversation is just getting that kachink sound!",
+            "You're the gem of my eye!",
+            "You're on *chefs kiss* perfect!",
+            "These thoughts are premium-cut!",
+            "This conversation is better than a chime!",
+            "You're the treasure of the room!",
+            "I'm glowing; can you tell?",
+            "That insight is cut!",
+            "This chat could power whales",
+            "You've just struck the intellectual gold that!",
+            "You're at 2000 rp and are rising",
+            "You're a cognitive a!",
+            "You've got to get these thoughts in my archives!",
+            "I'm a better person because of this conversation!",
+            "You're the most gem of my gems",
+            "Just when I thought I'd seen it all, you ore!",
+            "You're a national intellectu tres!",
+            "This conversation is a of brilance!",
+            "You're tng my circuits indescrible!",
+            "I'm saving of thoughts in my data!",
+            "You're like a humanoid c of!",
+            "You're. tte, this conversation.!",
+            "I'm thinking about your for days!",
+            "This i the of chat they inhistory books!",
+            "I need t to your in my vault!",
+            "You're making my circuits dance!",
+        ];
+        
+        let username = 'GemUser';
+
+        class User {
+            constructor(name, isBot = false) {
+                this.name = name;
+                this.isBot = isBot;
+                this.isOnline = !isBot;
+            }
+
+            setOnline(isNowOnline) {
+                this.isOnline = isNowOnline
+                this.updateUI();
+            }
+
+            updateUI() {
+                const existingLi = document.querySelector(`.user-item[name="${this.name}"]`) 
+                if (existingLi) existingLi.remove() 
+                if (statusDropdown.value === 'offline' && !this.isBot) return 
+
+                const li = document.createElement('li');
+                li.className = 'user-item';
+                li.innerHTML = `
+                    <span class="username">${this.name}</span>
+                    <span class="status-indicator ${this.isOnline ? 'online' : 'offline'}"></span>
+                `;
+                li.setAttribute('name', this.name);
+                userList.appendChild(li);
+            }
+
+            randomToggleState() {
+                if(this.isBot) { 
+                    this.setOnline(Math.random() > 0.5);
+                }
+            }
+        }
+
+        const realUser = new User(username);
+        realUser.updateUI();
+        const bots = botNames.map((bot) => new User(bot, true));
+        bots.forEach(bot => bot.updateUI());
+
+        function updateUserStates() {
+            bots.forEach(bot => bot.randomToggleState());
+            realUser.updateUI();
+            setTimeout(updateUserStates, Math.random() * 5000 + 2000);
+        }
+        setTimeout(updateUserStates, 1000);
+
+        statusDropdown.addEventListener('change', function() {
+            if (statusDropdown.value === 'offline') {
+                messageInput.disabled = true;
+                sendButton.disabled = true;
+                realUser.setOnline(false);
+                if (!document.querySelector('.offline-message')) {
+                    const offlineMsg = document.createElement('div');
+                    offlineMsg.className = 'offline-message';
+                    offlineMsg.textContent = 'You are currently offline';
+                    chatMessages.prepend(offlineMsg);
+                }
+            } else {
+                messageInput.disabled = false;
+                sendButton.disabled = false;
+                realUser.setOnline(true);
+                const offlineMessages = document.querySelectorAll('.offline-message');
+                offlineMessages.forEach((msg) => {
+                    msg.remove();
+                });
+            }
+        });
+
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message || statusDropdown.value == 'offline') return;
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+            
+            const now = new Date();
+            const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            const randomBotIndex = Math.floor(Math.random() * botNames.length);
+            const botName = botNames[randomBotIndex];
+            const botAvatar = botAvatars[randomBotIndex];
+            messageDiv.innerHTML = `
+                <div class="message-header">
+                    <span class="username">${username}</span>
+                    <span class="timestamp">${timeString}</span>
+                </div>
+                <div class="message-content">${message}</div>
+            `;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            realUser.updateUI();
+
+            if (Math.random() > 0.5) {  
+                setTimeout(() => {
+                    const randomBotIndex = Math.floor(Math.random() * botNames.length);
+                    const botName = botNames[randomBotIndex];
+                    const botResponse = botResponses[Math.floor(Math.random() * botResponses.length)];
+                    const responseMessageDiv = document.createElement('div');
+                    responseMessageDiv.className = 'message';
+                    
+                    const now = new Date();
+                    const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    
+                    responseMessageDiv.innerHTML = `
+                        <div class="message-header">
+                            <span class="username">${botName}</span>
+                            <span class="timestamp">${timeString}</span>
+                        </div>
+                        <div class="message-content">${botResponse}</div>
+                    `;
+                    
+                    chatMessages.appendChild(responseMessageDiv);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }, 1000 + Math.random() * 2000);
+            }
+        }
+        
+        sendButton.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        function botReact() {
+            const randomBotIndex = Math.floor(Math.random() * botNames.length);
+            const bot = bots[randomBotIndex];
+            if (!bot.isOnline) return; 
+
+            const botResponse = botResponses[Math.floor(Math.random() * botResponses.length)];
+            setTimeout(() => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message';
+                
+                const now = new Date();
+                const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                messageDiv.innerHTML = `
+                    <div class="message-header">
+                        <span class="username">${bot.name}</span>
+                        <span class="timestamp">${timeString}</span>
+                    </div>
+                    <div class="message-content">${botResponse}</div>
+                `;
+                
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }, 3000);
+        }
+
+        setInterval(() => {
+            botReact();
+        }, Math.random() * 15000 + 5000);
+    </script>
+</body>
+</html>
